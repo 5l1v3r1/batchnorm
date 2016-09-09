@@ -41,7 +41,7 @@ func BatchNorm(network neuralnet.Network, samples sgd.SampleSet,
 		if !f(i, layer) {
 			continue
 		}
-		mean, variance := batchStatistics(network, samples)
+		mean, variance := batchStatistics(res, samples)
 		res = append(res, &neuralnet.RescaleLayer{
 			Bias:  -mean,
 			Scale: 1 / math.Sqrt(variance),
