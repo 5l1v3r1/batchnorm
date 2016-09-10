@@ -15,9 +15,9 @@ func batchStatistics(n neuralnet.Network, samples sgd.SampleSet, outSize int) (m
 		sample := samples.GetSample(i).(neuralnet.VectorSample)
 		inVar := &autofunc.Variable{Vector: sample.Input}
 		out := n.Apply(inVar).Output()
-		for i, x := range out {
-			mean[i] += x
-			variance[i] += x * x
+		for j, x := range out {
+			mean[j] += x
+			variance[j] += x * x
 		}
 	}
 	mean.Scale(1 / float64(samples.Len()))

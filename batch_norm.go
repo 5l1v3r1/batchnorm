@@ -20,11 +20,11 @@ func BatchNorm(net neuralnet.Network, batch sgd.SampleSet, stabilizer float64) {
 	for i, layer := range net {
 		if l, ok := layer.(*Layer); ok {
 			mean, variance := batchStatistics(net[:i], batch, l.InputCount)
-			for i, x := range mean {
-				l.NegMeans[i] = -x
+			for j, x := range mean {
+				l.NegMeans[j] = -x
 			}
-			for i, x := range variance {
-				l.InvStddevs[i] = 1 / math.Sqrt(stabilizer+x)
+			for j, x := range variance {
+				l.InvStddevs[j] = 1 / math.Sqrt(stabilizer+x)
 			}
 		}
 	}
