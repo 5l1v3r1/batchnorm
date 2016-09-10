@@ -129,7 +129,7 @@ func (l *Layer) Batch(in autofunc.Result, n int) autofunc.Result {
 	n = len(in.Output()) / l.InputCount
 	return autofunc.Pool(in, func(in autofunc.Result) autofunc.Result {
 		mean := computeMeans(in, l.InputCount)
-		variance := computeMeans(autofunc.Square(in), l.InputCount)
+		variance := computeMeanSquares(in, l.InputCount)
 		meanSquared := autofunc.Square(mean)
 		variance = autofunc.Add(variance, autofunc.Scale(meanSquared, -1))
 
