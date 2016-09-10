@@ -1,9 +1,17 @@
 package batchnorm
 
 import (
+	"encoding/json"
+
 	"github.com/unixpickle/autofunc"
 	"github.com/unixpickle/num-analysis/linalg"
+	"github.com/unixpickle/serializer"
 )
+
+func init() {
+	var l Layer
+	serializer.RegisterTypedDeserializer(l.SerializerType(), DeserializeLayer)
+}
 
 // A Layer can be placed in a neuralnet.Network to apply
 // Batch Normalization at that place in the network.
@@ -20,6 +28,15 @@ type Layer struct {
 	// normalize the input to this layer.
 	NegMeans   linalg.Vector
 	InvStddevs linalg.Vector
+}
+
+// DeserializeLayer deserializes a Layer.
+func DeserializeLayer(d []byte) (*Layer, error) {
+	var res Layer
+	if err := json.Unmarshal(d, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
 }
 
 // NewLayer creates a layer with pre-initialized variables
@@ -75,4 +92,15 @@ func (l *Layer) ApplyR(rv autofunc.RVector, in autofunc.RResult) autofunc.RResul
 	normalized := autofunc.MulR(autofunc.AddR(in, negMeanVar), invStdVar)
 	return autofunc.AddR(autofunc.MulR(normalized, autofunc.NewRVariable(l.Scales, rv)),
 		autofunc.NewRVariable(l.Biases, rv))
+}
+
+// SerializerType returns the unique ID used to serialize
+// this layer with the serializer package.
+func (l *Layer) SerializerType() string {
+	return "github.com/unixpickle/batchnorm.Layer"
+}
+
+// Serialize serializes the parameters of this layer.
+func (l *Layer) Serialize() ([]byte, error) {
+	return json.Marshal(l)
 }
