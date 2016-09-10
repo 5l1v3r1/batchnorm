@@ -3,21 +3,18 @@ package batchnorm
 import (
 	"fmt"
 
-	"github.com/unixpickle/autofunc"
 	"github.com/unixpickle/num-analysis/linalg"
 	"github.com/unixpickle/sgd"
 	"github.com/unixpickle/weakai/neuralnet"
 )
 
-func batchStatistics(n neuralnet.Network, samples sgd.SampleSet, outSize int) (mean,
-	variance linalg.Vector) {
+func batchStatistics(n neuralnet.Network, samples sgd.SampleSet, outSize int,
+	o *outputCache) (mean, variance linalg.Vector) {
 	mean = make(linalg.Vector, outSize)
 	variance = make(linalg.Vector, outSize)
 	var count int
 	for i := 0; i < samples.Len(); i++ {
-		sample := samples.GetSample(i).(neuralnet.VectorSample)
-		inVar := &autofunc.Variable{Vector: sample.Input}
-		out := n.Apply(inVar).Output()
+		out := o.Eval(i, n, samples)
 		if len(out)%outSize != 0 {
 			panicMsg := fmt.Sprintf("layer %d got size %d (not divisible by %d)",
 				len(n), len(out), outSize)

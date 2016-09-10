@@ -1,6 +1,7 @@
 package batchnorm
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"testing"
@@ -13,8 +14,13 @@ import (
 func TestBatchNorm(t *testing.T) {
 	net := testNetwork()
 	samples := testSamples()
-	BatchNorm(net, samples, 1e-7)
-	verifyStatistics(t, net, samples)
+	for _, cache := range []int{0, 11 * 30, 11 * 51, 10 * 50, 13 * 50, 13 * 51} {
+		name := fmt.Sprintf("Cache%d", cache)
+		t.Run(name, func(t *testing.T) {
+			BatchNorm(net, samples, 1e-7, cache)
+			verifyStatistics(t, net, samples)
+		})
+	}
 }
 
 func BenchmarkBatchNorm(b *testing.B) {
@@ -59,7 +65,7 @@ func BenchmarkBatchNorm(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		BatchNorm(net, samples, 1e-4)
+		BatchNorm(net, samples, 1e-4, 1000*5)
 	}
 }
 
@@ -67,12 +73,12 @@ func testNetwork() neuralnet.Network {
 	net := neuralnet.Network{
 		&neuralnet.DenseLayer{
 			InputCount:  16,
-			OutputCount: 10,
+			OutputCount: 11,
 		},
-		NewLayer(10),
+		NewLayer(11),
 		&neuralnet.HyperbolicTangent{},
 		&neuralnet.DenseLayer{
-			InputCount:  10,
+			InputCount:  11,
 			OutputCount: 13,
 		},
 		NewLayer(13),
@@ -109,7 +115,8 @@ func testSamples() sgd.SampleSet {
 func verifyStatistics(t *testing.T, net neuralnet.Network, samples sgd.SampleSet) {
 	for i, layer := range net {
 		if l, ok := layer.(*Layer); ok {
-			mean, variance := batchStatistics(net[:i+1], samples, l.InputCount)
+			o := newOutputCache(0, samples.Len())
+			mean, variance := batchStatistics(net[:i+1], samples, l.InputCount, o)
 			for _, x := range mean {
 				if math.Abs(x) > 1e-5 {
 					t.Errorf("bad mean: %f", x)
