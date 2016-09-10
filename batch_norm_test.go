@@ -33,7 +33,7 @@ func testNetwork() neuralnet.Network {
 		&neuralnet.HyperbolicTangent{},
 		&neuralnet.DenseLayer{
 			InputCount:  13,
-			OutputCount: 5,
+			OutputCount: 10,
 		},
 		NewLayer(5),
 	}

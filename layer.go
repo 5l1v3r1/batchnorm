@@ -16,6 +16,12 @@ func init() {
 // A Layer can be placed in a neuralnet.Network to apply
 // Batch Normalization at that place in the network.
 type Layer struct {
+	// InputCount specifies the number of independently
+	// normalized inputs to this layer.
+	// For placement after neuralnet.DenseLayers, this
+	// should be the full size of the input.
+	// For placement after neuralnet.ConvLayer, this
+	// should be the number of filters.
 	InputCount int
 
 	// These parameters are learned by the neural network
@@ -66,20 +72,29 @@ func (l *Layer) Parameters() []*autofunc.Variable {
 }
 
 // Apply applies batch normalization to the input.
+// The input's length must be divisible by l.InputCount.
 func (l *Layer) Apply(in autofunc.Result) autofunc.Result {
-	if len(in.Output()) != l.InputCount {
-		panic("incorrect input size")
+	if len(in.Output())%l.InputCount != 0 {
+		panic("invalid input size")
 	}
-	normalized := autofunc.Mul(autofunc.Add(in, &autofunc.Variable{Vector: l.NegMeans}),
-		&autofunc.Variable{Vector: l.InvStddevs})
-	return autofunc.Add(autofunc.Mul(normalized, l.Scales), l.Biases)
+	n := len(in.Output()) / l.InputCount
+
+	negMean := autofunc.Repeat(&autofunc.Variable{Vector: l.NegMeans}, n)
+	invStd := autofunc.Repeat(&autofunc.Variable{Vector: l.InvStddevs}, n)
+	scales := autofunc.Repeat(l.Scales, n)
+	biases := autofunc.Repeat(l.Biases, n)
+
+	normalized := autofunc.Mul(autofunc.Add(in, negMean), invStd)
+	return autofunc.Add(autofunc.Mul(normalized, scales), biases)
 }
 
 // ApplyR is like Apply but with r-operator support.
 func (l *Layer) ApplyR(rv autofunc.RVector, in autofunc.RResult) autofunc.RResult {
-	if len(in.Output()) != l.InputCount {
-		panic("incorrect input size")
+	if len(in.Output())%l.InputCount != 0 {
+		panic("invalid input size")
 	}
+	n := len(in.Output()) / l.InputCount
+
 	zeroVec := make(linalg.Vector, l.InputCount)
 	negMeanVar := &autofunc.RVariable{
 		Variable:   &autofunc.Variable{Vector: l.NegMeans},
@@ -89,9 +104,14 @@ func (l *Layer) ApplyR(rv autofunc.RVector, in autofunc.RResult) autofunc.RResul
 		Variable:   &autofunc.Variable{Vector: l.InvStddevs},
 		ROutputVec: zeroVec,
 	}
-	normalized := autofunc.MulR(autofunc.AddR(in, negMeanVar), invStdVar)
-	return autofunc.AddR(autofunc.MulR(normalized, autofunc.NewRVariable(l.Scales, rv)),
-		autofunc.NewRVariable(l.Biases, rv))
+
+	negMean := autofunc.RepeatR(negMeanVar, n)
+	invStd := autofunc.RepeatR(invStdVar, n)
+	scales := autofunc.RepeatR(autofunc.NewRVariable(l.Scales, rv), n)
+	biases := autofunc.RepeatR(autofunc.NewRVariable(l.Biases, rv), n)
+
+	normalized := autofunc.MulR(autofunc.AddR(in, negMean), invStd)
+	return autofunc.AddR(autofunc.MulR(normalized, scales), biases)
 }
 
 // SerializerType returns the unique ID used to serialize
