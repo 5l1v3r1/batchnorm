@@ -17,6 +17,52 @@ func TestBatchNorm(t *testing.T) {
 	verifyStatistics(t, net, samples)
 }
 
+func BenchmarkBatchNorm(b *testing.B) {
+	net := neuralnet.Network{
+		&neuralnet.DenseLayer{
+			InputCount:  1000,
+			OutputCount: 1000,
+		},
+		NewLayer(1000),
+		&neuralnet.HyperbolicTangent{},
+		&neuralnet.DenseLayer{
+			InputCount:  1000,
+			OutputCount: 50,
+		},
+		NewLayer(50),
+		&neuralnet.HyperbolicTangent{},
+		&neuralnet.DenseLayer{
+			InputCount:  50,
+			OutputCount: 1000,
+		},
+		NewLayer(1000),
+		&neuralnet.HyperbolicTangent{},
+		&neuralnet.DenseLayer{
+			InputCount:  1000,
+			OutputCount: 300,
+		},
+		NewLayer(300),
+		&neuralnet.HyperbolicTangent{},
+	}
+	net.Randomize()
+
+	var samples sgd.SliceSampleSet
+	for i := 0; i < 5; i++ {
+		inVec := make(linalg.Vector, 1000)
+		for j := range inVec {
+			inVec[j] = rand.NormFloat64()
+		}
+		samples = append(samples, neuralnet.VectorSample{
+			Input: inVec,
+		})
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		BatchNorm(net, samples, 1e-4)
+	}
+}
+
 func testNetwork() neuralnet.Network {
 	net := neuralnet.Network{
 		&neuralnet.DenseLayer{
