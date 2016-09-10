@@ -2,43 +2,28 @@ package batchnorm
 
 import (
 	"github.com/unixpickle/autofunc"
+	"github.com/unixpickle/num-analysis/linalg"
 	"github.com/unixpickle/sgd"
 	"github.com/unixpickle/weakai/neuralnet"
 )
 
-func batchStatistics(n neuralnet.Network, samples sgd.SampleSet) (mean, variance float64) {
-	if len(n) == 0 {
-		return batchStatisticsFirst(samples)
-	}
-	var sum, squareSum float64
-	var count int
+func batchStatistics(n neuralnet.Network, samples sgd.SampleSet, outSize int) (mean,
+	variance linalg.Vector) {
+	mean = make(linalg.Vector, outSize)
+	variance = make(linalg.Vector, outSize)
 	for i := 0; i < samples.Len(); i++ {
 		sample := samples.GetSample(i).(neuralnet.VectorSample)
 		inVar := &autofunc.Variable{Vector: sample.Input}
-		out := n.Apply(inVar)
-		for _, x := range out.Output() {
-			sum += x
-			squareSum += x * x
-			count++
+		out := n.Apply(inVar).Output()
+		for i, x := range out {
+			mean[i] += x
+			variance[i] += x * x
 		}
 	}
-	mean = sum / float64(count)
-	variance = squareSum/float64(count) - mean*mean
-	return
-}
-
-func batchStatisticsFirst(samples sgd.SampleSet) (mean, variance float64) {
-	var sum, squareSum float64
-	var count int
-	for i := 0; i < samples.Len(); i++ {
-		sample := samples.GetSample(i).(neuralnet.VectorSample)
-		for _, x := range sample.Input {
-			sum += x
-			squareSum += x * x
-			count++
-		}
+	mean.Scale(1 / float64(samples.Len()))
+	variance.Scale(1 / float64(samples.Len()))
+	for i, x := range mean {
+		variance[i] -= x * x
 	}
-	mean = sum / float64(count)
-	variance = squareSum/float64(count) - mean*mean
 	return
 }
