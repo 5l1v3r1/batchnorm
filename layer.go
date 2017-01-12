@@ -165,6 +165,8 @@ func (l *Layer) BatchR(rv autofunc.RVector, in autofunc.RResult, n int) autofunc
 				variance = autofunc.AddR(variance, autofunc.MulR(vec, vec))
 			}
 		}
+		mean = autofunc.ScaleR(mean, 1/float64(n))
+		variance = autofunc.ScaleR(variance, 1/float64(n))
 		meanSquared := autofunc.SquareR(mean)
 		variance = autofunc.AddR(variance, autofunc.ScaleR(meanSquared, -1))
 
