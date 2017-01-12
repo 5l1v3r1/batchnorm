@@ -23,7 +23,7 @@ func TestLayerOutput(t *testing.T) {
 	in := &autofunc.Variable{
 		Vector: linalg.RandVector(50),
 	}
-	actual := l.Apply(in).Output()
+	actual := l.Batch(in, 5).Output()
 
 	mean := in.Vector[:10].Copy()
 	meanSq := mean.Copy()

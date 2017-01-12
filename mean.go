@@ -1,6 +1,8 @@
 package batchnorm
 
 import (
+	"math"
+
 	"github.com/unixpickle/autofunc"
 	"github.com/unixpickle/num-analysis/linalg"
 )
@@ -90,4 +92,47 @@ func (m *meanSquareResult) PropagateGradient(upstream linalg.Vector, g autofunc.
 		}
 	}
 	m.Input.PropagateGradient(downstream, g)
+}
+
+type stddevResult struct {
+	OutputVec    linalg.Vector
+	FirstMoment  autofunc.Result
+	SecondMoment autofunc.Result
+}
+
+func computeStddev(mean, meanSquare autofunc.Result, fudge float64) autofunc.Result {
+	meanOut := mean.Output()
+	msOut := meanSquare.Output()
+	res := make(linalg.Vector, len(mean.Output()))
+	for i, x := range msOut {
+		res[i] = math.Sqrt(x - meanOut[i]*meanOut[i] + fudge)
+	}
+	return &stddevResult{
+		OutputVec:    res,
+		FirstMoment:  mean,
+		SecondMoment: meanSquare,
+	}
+}
+
+func (v *stddevResult) Output() linalg.Vector {
+	return v.OutputVec
+}
+
+func (v *stddevResult) Constant(g autofunc.Gradient) bool {
+	return v.FirstMoment.Constant(g) && v.SecondMoment.Constant(g)
+}
+
+func (v *stddevResult) PropagateGradient(u linalg.Vector, g autofunc.Gradient) {
+	for i, x := range v.OutputVec {
+		u[i] /= 2 * x
+	}
+	if !v.SecondMoment.Constant(g) {
+		v.SecondMoment.PropagateGradient(u.Copy(), g)
+	}
+	if !v.FirstMoment.Constant(g) {
+		for i, x := range v.FirstMoment.Output() {
+			u[i] *= -2 * x
+		}
+		v.FirstMoment.PropagateGradient(u, g)
+	}
 }

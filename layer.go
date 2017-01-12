@@ -129,13 +129,14 @@ func (l *Layer) Batch(in autofunc.Result, n int) autofunc.Result {
 	n = len(in.Output()) / l.InputCount
 	return autofunc.Pool(in, func(in autofunc.Result) autofunc.Result {
 		mean := computeMeans(in, l.InputCount)
-		variance := computeMeanSquares(in, l.InputCount)
-		meanSquared := autofunc.Square(mean)
-		variance = autofunc.Add(variance, autofunc.Scale(meanSquared, -1))
-
-		normalized := addMul(in, autofunc.Scale(mean, -1),
-			autofunc.Pow(autofunc.AddScaler(variance, l.stabilizer()), -0.5), n)
-		return mulAdd(normalized, l.Scales, l.Biases, n)
+		meanSquare := computeMeanSquares(in, l.InputCount)
+		stddev := computeStddev(mean, meanSquare, l.stabilizer())
+		offset := autofunc.Sub(
+			autofunc.Div(autofunc.Mul(l.Biases, stddev), l.Scales),
+			mean,
+		)
+		scale := autofunc.Div(l.Scales, stddev)
+		return addMul(in, offset, scale, n)
 	})
 }
 

@@ -43,3 +43,18 @@ func TestComputeMeanSquares(t *testing.T) {
 
 	testEquivalence(t, actual, expected, []*autofunc.Variable{input})
 }
+
+func TestComputeStddev(t *testing.T) {
+	input := &autofunc.Variable{
+		Vector: make(linalg.Vector, 30),
+	}
+	for i := range input.Vector {
+		input.Vector[i] = rand.NormFloat64()
+	}
+	mean := computeMeans(input, 6)
+	meanSquare := computeMeanSquares(input, 6)
+	actual := computeStddev(mean, meanSquare, 0)
+	expected := autofunc.Pow(autofunc.Sub(meanSquare, autofunc.Pow(mean, 2)), 0.5)
+
+	testEquivalence(t, actual, expected, []*autofunc.Variable{input})
+}

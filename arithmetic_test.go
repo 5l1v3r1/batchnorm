@@ -34,31 +34,6 @@ func TestAddMul(t *testing.T) {
 	testEquivalence(t, actual, expected, []*autofunc.Variable{input, bias, scale})
 }
 
-func TestMulAdd(t *testing.T) {
-	input := &autofunc.Variable{
-		Vector: make(linalg.Vector, 30),
-	}
-	bias := &autofunc.Variable{
-		Vector: make(linalg.Vector, 6),
-	}
-	scale := &autofunc.Variable{
-		Vector: make(linalg.Vector, 6),
-	}
-	for i := range scale.Vector {
-		scale.Vector[i] = rand.NormFloat64()
-		bias.Vector[i] = rand.NormFloat64()
-	}
-	for i := range input.Vector {
-		input.Vector[i] = rand.NormFloat64()
-	}
-
-	actual := mulAdd(input, scale, bias, 5)
-	expected := autofunc.Add(autofunc.Mul(input, autofunc.Repeat(scale, 5)),
-		autofunc.Repeat(bias, 5))
-
-	testEquivalence(t, actual, expected, []*autofunc.Variable{input, bias, scale})
-}
-
 func testEquivalence(t *testing.T, actual, expected autofunc.Result, params []*autofunc.Variable) {
 	t.Run("Forward", func(t *testing.T) {
 		for i, a := range actual.Output() {
